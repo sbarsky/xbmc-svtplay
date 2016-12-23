@@ -263,27 +263,28 @@ def getEpisodes(title):
   """
   Returns the episodes for a program URL.
   """
-  url = BASE_URL+API_URL+"video_title_page;title="+title
+  common.log("The title: "+title)
+  url = BASE_URL+API_URL+"episodes_from_title?title="+title + "&page=1"
   r = requests.get(url)
   if r.status_code != 200:
     common.log("Could not get JSON for "+url)
     return None
   programs = []
-  for item in r.json()["relatedVideos"]["episodes"]:
-    program = {}
-    program["title"] = item["title"]
-    try:
-      program["title"] = program["title"] + "[COLOR green] (S%sE%s)[/COLOR]" % (str(item["season"]), str(item["episodeNumber"]))
-    except KeyError as e:
-      # Supress
-      pass
-    program["url"] = "video/" + str(item["id"])
-    program["thumbnail"] = helper.prepareThumb(item.get("thumbnail", ""), BASE_URL)
-    info = {}
-    info["plot"] = item.get("description", "")
-    info["fanart"] = helper.prepareFanart(item.get("poster", ""), BASE_URL)
-    program["info"] = info
-    programs.append(program)
+  pages = r.json()["paginationData"]["totalPages"]
+  for k in range(1, pages+1):
+    if k != 1:
+      url = BASE_URL+API_URL+"episodes_from_title?title="+title+"&page="+str(k)
+      r = requests.get(url)
+    for item in r.json()["videos"]:
+      program = {}
+      program["title"] = item["programTitle"]+" - "+item["title"]
+      program["url"] = item["contentUrl"]
+      program["thumbnail"] = helper.prepareThumb(item.get("thumbnail", ""), BASE_URL)
+      info = {}
+      info["plot"] = item.get("description", "")
+      info["fanart"] = helper.prepareFanart(item.get("poster", ""), BASE_URL)
+      program["info"] = info
+      programs.append(program)
   return programs
 
 def getClips(title):
